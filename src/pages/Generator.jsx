@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { groqAI } from '../lib/groq'
-
+import { useAuth } from '../contexts/AuthContext'
+import { supabase } from '../lib/supabase'
 const Generator = () => {
   const [step, setStep] = useState(1)
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState(null)
   const [copied, setCopied] = useState('')
+  const { user } = useAuth();
 
   const [form, setForm] = useState({
     // Your details
@@ -71,9 +73,26 @@ Generate in this EXACT JSON format:
       )
 
       const cleaned = response.replace(/```json|```/g, '').trim()
-      const parsed = JSON.parse(cleaned)
-      setResult(parsed)
-      setStep(3)
+    const parsed = JSON.parse(cleaned)
+setResult(parsed)
+setStep(3)
+
+// Save to Supabase if logged in
+if (user) {
+  await supabase.from('generated_emails').insert([{
+    user_id: user.id,
+    subject: parsed.subject,
+    email: parsed.email,
+    followup1: parsed.followup1,
+    followup2: parsed.followup2,
+    prospect_name: form.prospect_name,
+    prospect_company: form.prospect_company,
+    your_name: form.your_name,
+    tone: form.tone,
+    goal: form.goal,
+    status: 'sent',
+  }])
+}
 
     } catch (err) {
       console.error(err)
